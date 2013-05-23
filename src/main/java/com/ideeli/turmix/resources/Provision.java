@@ -1,17 +1,19 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.ideeli.turmix.resources;
 
+import com.ideeli.turmix.CommonResources;
+import com.ideeli.turmix.TurmixException;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.PUT;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.Path;
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 
 /**
  * REST Web Service
@@ -24,30 +26,45 @@ public class Provision {
     @Context
     private UriInfo context;
 
-    /**
-     * Creates a new instance of Provision
-     */
-    public Provision() {
-    }
-
-    /**
-     * Retrieves representation of an instance of com.ideeli.turmix.resources.Provision
-     * @return an instance of java.lang.String
-     */
     @GET
-    @Produces("text/plain")
-    public String getText() {
-        //TODO return proper representation object
-        return "OKA!";
-    }
+    @Produces("application/json")
+    public String newNode(@QueryParam("host") String host,
+            @DefaultValue("") @QueryParam("classes") String classes,
+            @DefaultValue("-") @QueryParam("desc") String desc) throws IOException {
+        
+        String err = "{\"retcode\": 0}";
+        Connection c = null;
+        try {
+            c = CommonResources.connectionPool.getConnection();
+            c.setAutoCommit(false);
+            int retcode = CommonResources.dba.provisionMode(c, host, desc, classes);
+            err = "{\"retcode\": 0,\"id\":" + retcode + "}";
+            c.commit();
 
-    /**
-     * PUT method for updating or creating an instance of Provision
-     * @param content representation for the resource
-     * @return an HTTP response with content of the updated or created resource.
-     */
-    @PUT
-    @Consumes("text/plain")
-    public void putText(String content) {
+        } catch (SQLException ex) {
+            Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, ex);
+            err = "{\"retcode\": 101,\"error\":\"" + ex.getMessage() + "\"}";
+            if (c != null) {
+                try {
+                    c.rollback();
+                } catch (SQLException ex1) {
+                    Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, ex1);
+                    err = "{\"retcode\": 102,\"error\":\"" + ex1.getMessage() + "\"}";
+                }
+            }
+        } catch (TurmixException ex) {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, ex.getMessage());
+            err = "{\"retcode\": 103,\"error\":\"" + ex.getMessage() + "\"}";
+        } finally {
+            if (c != null) {
+                try {
+                    c.close();
+                } catch (SQLException e) {
+                    Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, e);
+                    err = "{\"retcode\": 104,\"error\":\"" + e.getMessage() + "\"}";
+                }
+            }
+        }
+        return err;
     }
 }

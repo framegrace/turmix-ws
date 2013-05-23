@@ -3,6 +3,9 @@ package com.ideeli.turmix;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -13,13 +16,14 @@ import org.apache.solr.client.solrj.SolrServerException;
  */
 public class IndexerAction {
 
-    void refreshIndex() {
+    public void refreshIndex() {
         Connection c = null;
         try {
             Logger.getLogger(IndexerAction.class.getName()).log(Level.INFO,"-- Refreshing --");
             c = CommonResources.connectionPool.getConnection();
-            CommonResources.server.deleteByQuery("*:*");
+            //CommonResources.server.deleteByQuery("*:*");
             CommonResources.pdba.pushToSolr();
+            CommonResources.server.commit();
             CommonResources.dba.pushToSolr(c);
             CommonResources.server.commit();
             Logger.getLogger(IndexerAction.class.getName()).log(Level.INFO,"-- Refreshed OK --");
@@ -41,4 +45,5 @@ public class IndexerAction {
             }
         }
     }
+
 }

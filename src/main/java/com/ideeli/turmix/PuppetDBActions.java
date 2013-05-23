@@ -34,12 +34,13 @@ public class PuppetDBActions {
             String host=p.get("name").getTextValue();
             JsonNode s=CommonResources.pdba.readNodeData(host);
             SolrDocument docl=new SolrDocument();
-            docl.setField("host",host);
+            docl.addField("host",host);
             Iterator<String> ite=s.getFieldNames();
             while(ite.hasNext()) {
                 String name=ite.next();
                 docl.addField(name,s.get(name).getTextValue());
             }
+        Logger.getLogger(PuppetDBActions.class.getName()).log(Level.INFO,">>>>>>>>>>>>Updating:"+docl.toString());            
             SolrQuery query = new SolrQuery();
             query.setQuery("host:" + host);
             QueryResponse rsp = CommonResources.server.query(query);
@@ -106,9 +107,9 @@ public class PuppetDBActions {
         return ret;
     }
     
-    public static void main(String[] args) throws SolrServerException, IOException, TurmixException {
-        CommonResources.initialize();
-        PuppetDBActions pda=new PuppetDBActions();
-        pda.pushToSolr();
-    }
+//    public static void main(String[] args) throws SolrServerException, IOException, TurmixException {
+//        CommonResources.initialize();
+//        PuppetDBActions pda=new PuppetDBActions();
+//        pda.pushToSolr();
+//    }
 }

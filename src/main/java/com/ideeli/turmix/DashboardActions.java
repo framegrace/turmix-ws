@@ -174,7 +174,7 @@ public class DashboardActions {
         return class_id;
     }
 
-    public JsonNode getClasses(Connection c, String node) throws SQLException {
+    public ArrayNode getClasses(Connection c, String node) throws SQLException {
         PreparedStatement classes = c.prepareStatement(GETCLASSES);
         classes.setString(1, node);
         classes.executeQuery();
@@ -241,6 +241,8 @@ public class DashboardActions {
                 String value = s.get(name).getTextValue();
                 docl.setField(name, value);
             }
+            // Classes/Tags
+            docl.setField("tags",getClasses(c,host).toString());
             SolrQuery query = new SolrQuery();
             query.setQuery("host:" + host);
             QueryResponse rsp = CommonResources.server.query(query);
