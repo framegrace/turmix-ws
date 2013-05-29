@@ -1,15 +1,22 @@
 package com.ideeli.turmix;
 
+import com.ideeli.turmix.indexer.IndexerTask;
+import com.ideeli.turmix.indexer.IndexerPlugin;
 import com.jolbox.bonecp.BoneCP;
 import com.jolbox.bonecp.BoneCPConfig;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.ws.rs.core.MultivaluedMap;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
@@ -25,7 +32,6 @@ import org.codehaus.jackson.node.ObjectNode;
  */
 public class CommonResources {
 
-
     public static final ThreadLocal<Client> restClient = new ThreadLocal<Client>() {
         @Override
         protected Client initialValue() {
@@ -34,18 +40,40 @@ public class CommonResources {
         }
     };
     public static ObjectMapper mapper = new ObjectMapper();
-    public static BoneCP connectionPool;
-    public static DashboardActions dba = new DashboardActions();
-    public static PuppetDBActions pdba = new PuppetDBActions();
-    public static IndexerAction index = new IndexerAction();
-    public static SolrServer server;
+    private static BoneCP connectionPool;
+    private static DashboardActions dba = new DashboardActions();
+    private static PuppetDBActions pdba = new PuppetDBActions();
+    private static IndexerTask index = new IndexerTask();
+    private static SolrServer server;
+    private static HashMap<String,IndexerPlugin> IndexerPlugins = new HashMap<>();
+    private static Properties configFile = new Properties();
+    private static String puppetDBURL = "";
+    private static boolean initialized=false;
 
     public static void initialize() {
-        initializePool();
-        //initializeFacts();
-        server = new HttpSolrServer("http://localhost:8080/solr/");
+        String configFilePath="";
+        try {
+            configFilePath=System.getProperty("turmix.config.file");
+            if (configFilePath==null) {
+                configFilePath="/etc/turmix/turmix.properties";
+            }
+            configFile.load(new FileInputStream(configFilePath));
+            initializePool();
+            initializeDashboard();
+            initializeSolr();
+            initialized=true;
+        } catch (IOException | RuntimeException ex) {
+            Logger.getLogger(CommonResources.class.getName()).log(Level.SEVERE, "Error reading config file "+configFilePath, ex);
+        }
     }
 
+    public static void addIndexerPlugin(IndexerPlugin ip) throws TurmixException {
+        getIndexerPlugins().put(ip.getName(), ip);
+    }
+    
+    private static void initializeDashboard() {
+        puppetDBURL=configFile.getProperty("puppetdb.url");
+    }
     private static void initializePool() {
 
         Connection connection = null;
@@ -53,43 +81,47 @@ public class CommonResources {
             // load the database driver (make sure this is in your classpath!)
             Class.forName("com.mysql.jdbc.Driver");
         } catch (Exception e) {
-            e.printStackTrace();
+            Logger.getLogger(CommonResources.class.getName()).log(Level.SEVERE, "DB connection error", e);
             return;
         }
-
         try {
             // setup the connection pool
             BoneCPConfig config = new BoneCPConfig();
-            config.setJdbcUrl("jdbc:mysql://localhost/dashboard");
-            config.setUsername("dashboard");
-            config.setPassword("98dashboard76");
-            config.setMinConnectionsPerPartition(5);
-            config.setMaxConnectionsPerPartition(10);
+            //"jdbc:mysql://localhost/dashboard"
+            //"dashboard"
+            //"98dashboard76"
+            config.setJdbcUrl(configFile.getProperty("jdbc.url"));
+            config.setUsername(configFile.getProperty("jdbc.user"));
+            config.setPassword(configFile.getProperty("jdbc.pwd"));
+            config.setMinConnectionsPerPartition(configFile.getProperty("jdbc.pool.min")==null?5:new Integer(configFile.getProperty("jdbc.pool.min")));
+            config.setMaxConnectionsPerPartition(configFile.getProperty("jdbc.pool.max")==null?10:new Integer(configFile.getProperty("jdbc.pool.min")));
             config.setPartitionCount(1);
             connectionPool = new BoneCP(config);
         } catch (SQLException e) {
-            e.printStackTrace();
+            Logger.getLogger(CommonResources.class.getName()).log(Level.SEVERE, "DB connection error", e);
         } finally {
             if (connection != null) {
                 try {
                     connection.close();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    Logger.getLogger(CommonResources.class.getName()).log(Level.SEVERE, "Error closing connection", e);
                 }
             }
         }
     }
 
-    public static ArrayNode queryPuppetDB(String path, MultivaluedMap<String, String> params) throws IOException {
-        WebResource resource = restClient.get().resource("http://localhost:8888/");
-        //params.add("format","json");
+    public static ArrayNode queryPuppetDB(String path, MultivaluedMap<String, String> params) throws IOException, TurmixException {
+        WebResource resource = restClient.get().resource(puppetDBURL);
         String data_rw = resource.path(path).queryParams(params).accept("application/json").get(String.class);
+        if (data_rw == null) {
+            throw new TurmixException("Error on puppetDBClient connection. No data returned.");
+        }
         ArrayNode an = (ArrayNode) mapper.readTree(data_rw);
         return an;
     }
 
     public static ArrayNode queryPuppetDB(String path, String ky, String vl) throws IOException, TurmixException {
-        WebResource resource = restClient.get().resource("http://localhost:8888/");
+        WebResource resource = restClient.get().resource(puppetDBURL);
         //params.add("format","json");
         String data_rw = resource.path(path).queryParam(ky, vl).accept("application/json").get(String.class);
         if (data_rw == null) {
@@ -99,31 +131,16 @@ public class CommonResources {
         return an;
     }
 
-//    public static String convert(String format, Object data) throws IOException {
-//        String out = "";
-//        switch (format) {
-//            case "yaml":
-//                Yaml yaml = new Yaml();
-//                out = yaml.dump(data);
-//                break;
-//            case "json":
-//                out = CommonResources.mapper.writeValueAsString(data);
-//        }
-//        return out;
-//    }
-
-    public static boolean mergeSolrDocuments(SolrDocument src, SolrDocument dest) {
-        boolean changed = false;
-        for (String src_name : src.getFieldNames()) {
-            Object dst_value = dest.get(src_name);
-            Object src_value = src.get(src_name);
-            // Unnecesary null test, but left it there for clarity
-            if ((dst_value == null) || (dst_value != null && !dst_value.equals(src_value))) {
-                dest.setField(src_name, src_value);
-                changed = true;
+    public static SolrDocument syncFields(String prefix, SolrDocument src, SolrDocument dest) {
+        for (String dest_name : dest.getFieldNames()) {
+            if (dest_name.startsWith(prefix)) {
+                dest.setField(dest_name,null);
             }
         }
-        return changed;
+        for (String src_name : src.getFieldNames()) {
+            dest.setField(prefix + "." + src_name, src.get(src_name));
+        }
+        return dest;
     }
 
     public static JsonNode mergeJsonDocuments(JsonNode destination, JsonNode source) {
@@ -147,5 +164,58 @@ public class CommonResources {
 
         }
         return destination;
+    }
+
+    public static void initializeSolr() {
+        // "http://localhost:8080/solr/"
+        server = new HttpSolrServer(configFile.getProperty("solr.url"));
+    }
+
+    /**
+     * @return the connectionPool
+     */
+    public static BoneCP getConnectionPool() throws TurmixException {
+        if (!initialized) throw new TurmixException("Turmix unitialized");
+        return connectionPool;
+    }
+
+    /**
+     * @return the dba
+     */
+    public static DashboardActions getDba() throws TurmixException {
+        if (!initialized) throw new TurmixException("Turmix unitialized");
+        return dba;
+    }
+
+    /**
+     * @return the pdba
+     */
+    public static PuppetDBActions getPdba() throws TurmixException {
+        if (!initialized) throw new TurmixException("Turmix unitialized");
+        return pdba;
+    }
+
+    /**
+     * @return the index
+     */
+    public static IndexerTask getIndex() throws TurmixException {
+        if (!initialized) throw new TurmixException("Turmix unitialized");
+        return index;
+    }
+
+    /**
+     * @return the server
+     */
+    public static SolrServer getServer() throws TurmixException {
+        if (!initialized) throw new TurmixException("Turmix unitialized");
+        return server;
+    }
+
+    /**
+     * @return the IndexerPlugins
+     */
+    public static HashMap<String,IndexerPlugin> getIndexerPlugins() throws TurmixException {
+        if (!initialized) throw new TurmixException("Turmix unitialized");
+        return IndexerPlugins;
     }
 }

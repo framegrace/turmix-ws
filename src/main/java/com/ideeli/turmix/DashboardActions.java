@@ -1,6 +1,5 @@
 package com.ideeli.turmix;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -8,15 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.response.QueryResponse;
-import org.apache.solr.client.solrj.util.ClientUtils;
-import org.apache.solr.common.SolrDocument;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -225,42 +216,5 @@ public class DashboardActions {
             ((ObjectNode) rootNode).put(rsc.getString(1), rsc.getString(2));
         }
         return rootNode;
-    }
-
-    public void pushToSolr(Connection c) throws SolrServerException, IOException, SQLException {
-        ArrayNode nodes = listNodes(c);
-        int hosts = nodes.size();
-        int updated = 0;
-        for (JsonNode Jhost : nodes) {
-            String host = Jhost.get("name").getTextValue();
-            JsonNode s = getAllVars(c, host);
-            SolrDocument docl = new SolrDocument();
-            Iterator<String> ite = s.getFieldNames();
-            while (ite.hasNext()) {
-                String name = ite.next();
-                String value = s.get(name).getTextValue();
-                docl.setField(name, value);
-            }
-            // Classes/Tags
-            docl.setField("tags",getClasses(c,host).toString());
-            SolrQuery query = new SolrQuery();
-            query.setQuery("host:" + host);
-            QueryResponse rsp = CommonResources.server.query(query);
-            boolean changed = false;
-            SolrDocument dest = null;
-            if (rsp.getResults().size() > 0) {
-                dest = rsp.getResults().get(0);
-                changed = CommonResources.mergeSolrDocuments(docl, dest);
-            } else {
-                docl.setField("host", host);
-                dest = docl;
-                changed = true;
-            }
-            if (changed) {
-                CommonResources.server.add(ClientUtils.toSolrInputDocument(dest));
-                updated++;
-            }
-        }
-        Logger.getLogger(IndexerAction.class.getName()).log(Level.INFO,"Puppet Dashboard: " + updated + " of " + hosts + " updated.");
     }
 }

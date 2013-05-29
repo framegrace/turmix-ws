@@ -3,16 +3,8 @@ package com.ideeli.turmix;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.ws.rs.core.MultivaluedMap;
-import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.response.QueryResponse;
-import org.apache.solr.client.solrj.util.ClientUtils;
-import org.apache.solr.common.SolrDocument;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -26,44 +18,8 @@ public class PuppetDBActions {
 
     ObjectMapper mapper = new ObjectMapper();
 
-    public void pushToSolr() throws SolrServerException, IOException, TurmixException {
-        ArrayNode nodes=CommonResources.pdba.listNodes();
-        int hosts=nodes.size();
-        int updated=0;
-        for (JsonNode p : nodes) {
-            String host=p.get("name").getTextValue();
-            JsonNode s=CommonResources.pdba.readNodeData(host);
-            SolrDocument docl=new SolrDocument();
-            docl.addField("host",host);
-            Iterator<String> ite=s.getFieldNames();
-            while(ite.hasNext()) {
-                String name=ite.next();
-                docl.addField(name,s.get(name).getTextValue());
-            }
-        Logger.getLogger(PuppetDBActions.class.getName()).log(Level.INFO,">>>>>>>>>>>>Updating:"+docl.toString());            
-            SolrQuery query = new SolrQuery();
-            query.setQuery("host:" + host);
-            QueryResponse rsp = CommonResources.server.query(query);
-            
-            boolean changed = false;
-            SolrDocument dest ;
-            if (rsp.getResults().size() > 0) {
-                dest = rsp.getResults().get(0);
-                changed=CommonResources.mergeSolrDocuments(docl, dest);
-            } else {
-                docl.setField("host", host);
-                dest = docl;
-                changed=true;
-            }
-            if (changed) {
-                updated++;
-                CommonResources.server.add(ClientUtils.toSolrInputDocument(dest));
-            }
-        }
-        Logger.getLogger(IndexerAction.class.getName()).log(Level.INFO,"Puppet DB: "+updated+" of "+hosts+" updated.");
-    }
     
-    public JsonNode readNodeData(String node) throws IOException {
+    public JsonNode readNodeData(String node) throws IOException, TurmixException {
         MultivaluedMap<String, String> data = new MultivaluedMapImpl();
         data.add("query", "[\"=\", \"certname\", \"" + node + "\"]");
         JsonNode result = CommonResources.queryPuppetDB("/v2/facts/", data);
@@ -74,12 +30,9 @@ public class PuppetDBActions {
         return rootNode;
     }
     
-     public ArrayNode listNodes() throws IOException, TurmixException {
-         ArrayNode an = (ArrayNode) CommonResources.queryPuppetDB("v2/nodes","","");
-         return an;
-     }
+
      
-    public Set<String> searchNodes(String params_rw) throws IOException {
+    public Set<String> searchNodes(String params_rw) throws IOException, TurmixException {
         String[] params = params_rw.split(",");
         String filter = "";
         String sep = "[ \"and\",";
@@ -106,10 +59,4 @@ public class PuppetDBActions {
         }
         return ret;
     }
-    
-//    public static void main(String[] args) throws SolrServerException, IOException, TurmixException {
-//        CommonResources.initialize();
-//        PuppetDBActions pda=new PuppetDBActions();
-//        pda.pushToSolr();
-//    }
 }
