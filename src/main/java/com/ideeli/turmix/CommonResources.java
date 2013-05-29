@@ -15,6 +15,9 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Properties;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ws.rs.core.MultivaluedMap;
@@ -45,35 +48,36 @@ public class CommonResources {
     private static PuppetDBActions pdba = new PuppetDBActions();
     private static IndexerTask index = new IndexerTask();
     private static SolrServer server;
-    private static HashMap<String,IndexerPlugin> IndexerPlugins = new HashMap<>();
+    private static HashMap<String, IndexerPlugin> IndexerPlugins = new HashMap<>();
     private static Properties configFile = new Properties();
     private static String puppetDBURL = "";
-    private static boolean initialized=false;
+    private static boolean initialized = false;
 
     public static void initialize() {
-        String configFilePath="";
+        String configFilePath = "";
         try {
-            configFilePath=System.getProperty("turmix.config.file");
-            if (configFilePath==null) {
-                configFilePath="/etc/turmix/turmix.properties";
+            configFilePath = System.getProperty("turmix.config.file");
+            if (configFilePath == null) {
+                configFilePath = "/etc/turmix/turmix.properties";
             }
             configFile.load(new FileInputStream(configFilePath));
             initializePool();
             initializeDashboard();
             initializeSolr();
-            initialized=true;
+            initialized = true;
         } catch (IOException | RuntimeException ex) {
-            Logger.getLogger(CommonResources.class.getName()).log(Level.SEVERE, "Error reading config file "+configFilePath, ex);
+            Logger.getLogger(CommonResources.class.getName()).log(Level.SEVERE, "Error reading config file " + configFilePath, ex);
         }
     }
 
     public static void addIndexerPlugin(IndexerPlugin ip) throws TurmixException {
         getIndexerPlugins().put(ip.getName(), ip);
     }
-    
+
     private static void initializeDashboard() {
-        puppetDBURL=configFile.getProperty("puppetdb.url");
+        puppetDBURL = configFile.getProperty("puppetdb.url");
     }
+
     private static void initializePool() {
 
         Connection connection = null;
@@ -93,8 +97,8 @@ public class CommonResources {
             config.setJdbcUrl(configFile.getProperty("jdbc.url"));
             config.setUsername(configFile.getProperty("jdbc.user"));
             config.setPassword(configFile.getProperty("jdbc.pwd"));
-            config.setMinConnectionsPerPartition(configFile.getProperty("jdbc.pool.min")==null?5:new Integer(configFile.getProperty("jdbc.pool.min")));
-            config.setMaxConnectionsPerPartition(configFile.getProperty("jdbc.pool.max")==null?10:new Integer(configFile.getProperty("jdbc.pool.min")));
+            config.setMinConnectionsPerPartition(configFile.getProperty("jdbc.pool.min") == null ? 5 : new Integer(configFile.getProperty("jdbc.pool.min")));
+            config.setMaxConnectionsPerPartition(configFile.getProperty("jdbc.pool.max") == null ? 10 : new Integer(configFile.getProperty("jdbc.pool.min")));
             config.setPartitionCount(1);
             connectionPool = new BoneCP(config);
         } catch (SQLException e) {
@@ -134,7 +138,7 @@ public class CommonResources {
     public static SolrDocument syncFields(String prefix, SolrDocument src, SolrDocument dest) {
         for (String dest_name : dest.getFieldNames()) {
             if (dest_name.startsWith(prefix)) {
-                dest.setField(dest_name,null);
+                dest.setField(dest_name, null);
             }
         }
         for (String src_name : src.getFieldNames()) {
@@ -175,7 +179,9 @@ public class CommonResources {
      * @return the connectionPool
      */
     public static BoneCP getConnectionPool() throws TurmixException {
-        if (!initialized) throw new TurmixException("Turmix unitialized");
+        if (!initialized) {
+            throw new TurmixException("Turmix unitialized");
+        }
         return connectionPool;
     }
 
@@ -183,7 +189,9 @@ public class CommonResources {
      * @return the dba
      */
     public static DashboardActions getDba() throws TurmixException {
-        if (!initialized) throw new TurmixException("Turmix unitialized");
+        if (!initialized) {
+            throw new TurmixException("Turmix unitialized");
+        }
         return dba;
     }
 
@@ -191,7 +199,9 @@ public class CommonResources {
      * @return the pdba
      */
     public static PuppetDBActions getPdba() throws TurmixException {
-        if (!initialized) throw new TurmixException("Turmix unitialized");
+        if (!initialized) {
+            throw new TurmixException("Turmix unitialized");
+        }
         return pdba;
     }
 
@@ -199,7 +209,9 @@ public class CommonResources {
      * @return the index
      */
     public static IndexerTask getIndex() throws TurmixException {
-        if (!initialized) throw new TurmixException("Turmix unitialized");
+        if (!initialized) {
+            throw new TurmixException("Turmix unitialized");
+        }
         return index;
     }
 
@@ -207,15 +219,46 @@ public class CommonResources {
      * @return the server
      */
     public static SolrServer getServer() throws TurmixException {
-        if (!initialized) throw new TurmixException("Turmix unitialized");
+        if (!initialized) {
+            throw new TurmixException("Turmix unitialized");
+        }
         return server;
     }
 
     /**
      * @return the IndexerPlugins
      */
-    public static HashMap<String,IndexerPlugin> getIndexerPlugins() throws TurmixException {
-        if (!initialized) throw new TurmixException("Turmix unitialized");
+    public static HashMap<String, IndexerPlugin> getIndexerPlugins() throws TurmixException {
+        if (!initialized) {
+            throw new TurmixException("Turmix unitialized");
+        }
         return IndexerPlugins;
+    }
+    static ScheduledExecutorService scheduleTaskExecutor;
+
+    public static void startIndexer() {
+        if (scheduleTaskExecutor == null) {
+            int period=configFile.getProperty("indexer.period")==null?1:new Integer(configFile.getProperty("indexer.period"));
+            int executerpool=configFile.getProperty("indexer.pool")==null?5:new Integer(configFile.getProperty("indexer.pool"));
+            scheduleTaskExecutor = Executors.newScheduledThreadPool(executerpool);
+            scheduleTaskExecutor.scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                        try {
+                            getIndex().refreshIndex();
+                        } catch (TurmixException ex) {
+                            Logger.getLogger(CommonResources.class.getName()).log(Level.SEVERE, "Cannot refresh Index", ex);
+                            scheduleTaskExecutor.shutdown();
+                        }
+                }
+            }, 1, period, TimeUnit.MINUTES);
+        }
+    }
+
+    public static void stopIndexer() throws InterruptedException {
+        if (scheduleTaskExecutor != null) {
+            scheduleTaskExecutor.shutdown();
+            scheduleTaskExecutor.awaitTermination(1, TimeUnit.MINUTES);
+        }
     }
 }
