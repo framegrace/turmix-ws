@@ -17,7 +17,7 @@ import javax.ws.rs.QueryParam;
  * @author marc
  */
 @Path("/setParameter")
-public class setVar {
+public class SetParameter {
 
     @GET
     @Produces("application/json")
@@ -32,25 +32,25 @@ public class setVar {
             CommonResources.getDba().addVar(c, name, value, node);
             c.commit();
         } catch (SQLException ex) {
-            Logger.getLogger(setVar.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SetParameter.class.getName()).log(Level.SEVERE, null, ex);
             err = "{\"retcode\": 101,\"error\":\"" + ex.getMessage() + "\"}";
             if (c != null) {
                 try {
                     c.rollback();
                 } catch (SQLException ex1) {
-                    Logger.getLogger(setVar.class.getName()).log(Level.SEVERE, null, ex1);
+                    Logger.getLogger(SetParameter.class.getName()).log(Level.SEVERE, null, ex1);
                     err = "{\"retcode\": 102,\"error\":\"" + ex1.getMessage() + "\"}";
                 }
             }
         } catch (TurmixException ex) {
-            Logger.getLogger(setVar.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SetParameter.class.getName()).log(Level.SEVERE, null, ex);
             err = "{\"retcode\": 103,\"error\":\"" + ex.getMessage() + "\"}";
         } finally {
             if (c != null) {
                 try {
                     c.close();
                 } catch (SQLException e) {
-                    Logger.getLogger(setVar.class.getName()).log(Level.SEVERE, null, e);
+                    Logger.getLogger(SetParameter.class.getName()).log(Level.SEVERE, null, e);
                     err = "{\"retcode\": 104,\"error\":\"" + e.getMessage() + "\"}";
                 }
             }
