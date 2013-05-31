@@ -1,4 +1,4 @@
-package com.ideeli.turmix.actions;
+package com.ideeli.turmix.resources;
 
 import com.ideeli.turmix.CommonResources;
 import com.ideeli.turmix.TurmixException;

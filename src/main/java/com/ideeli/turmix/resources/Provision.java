@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.ideeli.turmix.actions;
+package com.ideeli.turmix.resources;
 
 import com.ideeli.turmix.CommonResources;
 import com.ideeli.turmix.TurmixException;
