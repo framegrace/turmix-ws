@@ -4,7 +4,6 @@ import com.ideeli.turmix.CommonResources;
 import com.ideeli.turmix.TurmixException;
 import com.ideeli.turmix.indexer.plugins.NagiosIndexerPlugin;
 import java.io.IOException;
-import java.sql.Connection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ws.rs.GET;
