@@ -44,10 +44,10 @@ public class IndexerTask {
                 } catch (Exception e) {
                     Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error getting node list on " + ip.getName() + " IndexerPlugin",e);
                 }
-            }
+            }            
             int hosts = nodes.size();
             for (String host : nodes) {
-                boolean done = false;
+                System.out.println("    ->"+host);                boolean done = false;
                 // Optimistic locking 
                 while (!done) {
                     SolrQuery query = new SolrQuery();

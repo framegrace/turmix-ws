@@ -18,7 +18,7 @@ public class ServletContext implements ServletContextListener {
         Logger.getLogger(ServletContext.class.getName()).log(Level.SEVERE, "STARTING UP TURMIX");
         CommonResources.initialize();
         CommonResources.startIndexer();
-    }//end contextInitialized method
+    }
 
     @Override
     public void contextDestroyed(ServletContextEvent arg0) {

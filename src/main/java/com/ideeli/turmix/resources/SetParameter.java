@@ -20,7 +20,7 @@ import javax.ws.rs.QueryParam;
 public class SetParameter {
 
     @GET
-    @Produces("application/json")
+    @Produces("text/html")
     public String set(@QueryParam("host") String node,
             @QueryParam("name") String name,
             @QueryParam("value") String value) throws IOException {

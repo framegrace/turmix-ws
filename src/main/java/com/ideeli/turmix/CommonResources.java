@@ -2,6 +2,8 @@ package com.ideeli.turmix;
 
 import com.ideeli.turmix.indexer.IndexerTask;
 import com.ideeli.turmix.indexer.IndexerPlugin;
+import com.ideeli.turmix.indexer.plugins.PuppetDBIndexerPlugin;
+import com.ideeli.turmix.indexer.plugins.PuppetDashboardIndexerPlugin;
 import com.jolbox.bonecp.BoneCP;
 import com.jolbox.bonecp.BoneCPConfig;
 import com.sun.jersey.api.client.Client;
@@ -61,12 +63,15 @@ public class CommonResources {
                 configFilePath = "/etc/turmix/turmix.properties";
             }
             configFile.load(new FileInputStream(configFilePath));
+            initialized = true;
+            initializeIndexer();
             initializePool();
             initializeDashboard();
             initializeSolr();
-            initialized = true;
         } catch (IOException | RuntimeException ex) {
             Logger.getLogger(CommonResources.class.getName()).log(Level.SEVERE, "Error reading config file " + configFilePath, ex);
+        } catch (TurmixException te) {
+            Logger.getLogger(CommonResources.class.getName()).log(Level.SEVERE, "Initialization error ", te);
         }
     }
 
@@ -260,5 +265,10 @@ public class CommonResources {
             scheduleTaskExecutor.shutdown();
             scheduleTaskExecutor.awaitTermination(1, TimeUnit.MINUTES);
         }
+    }
+
+    private static void initializeIndexer() throws TurmixException {
+        CommonResources.addIndexerPlugin(new PuppetDBIndexerPlugin());
+        CommonResources.addIndexerPlugin(new PuppetDashboardIndexerPlugin());
     }
 }

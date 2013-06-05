@@ -25,7 +25,7 @@ import javax.ws.rs.QueryParam;
 public class Provision {
 
     @GET
-    @Produces("application/json")
+    @Produces("text/html")
     public String newNode(@QueryParam("host") String host,
             @DefaultValue("") @QueryParam("classes") String classes,
             @DefaultValue("-") @QueryParam("desc") String desc) throws IOException {
