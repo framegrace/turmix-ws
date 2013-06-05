@@ -2,6 +2,7 @@ package com.ideeli.turmix.indexer;
 
 import com.ideeli.turmix.CommonResources;
 import com.ideeli.turmix.TurmixException;
+import com.ideeli.turmix.indexer.plugins.NagiosIndexerPlugin;
 import com.ideeli.turmix.indexer.plugins.PuppetDBIndexerPlugin;
 import com.ideeli.turmix.indexer.plugins.PuppetDashboardIndexerPlugin;
 import java.io.IOException;
@@ -30,6 +31,7 @@ public class IndexerTask {
         // We could automate loading in the future
         CommonResources.addIndexerPlugin(new PuppetDBIndexerPlugin());
         CommonResources.addIndexerPlugin(new PuppetDashboardIndexerPlugin());
+        CommonResources.addIndexerPlugin(new NagiosIndexerPlugin());
     }
 
     public void refreshIndex() {

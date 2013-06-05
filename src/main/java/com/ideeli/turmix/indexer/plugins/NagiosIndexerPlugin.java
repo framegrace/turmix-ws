@@ -25,13 +25,15 @@ public class NagiosIndexerPlugin implements IndexerPlugin {
 
     @Override
     public SolrDocument syncDocFields(String host, SolrDocument dest) throws TurmixException {
-        synchronized(metrics) {
-            ArrayList<NagiosMetric> list=metrics.get(hosts);
-            SolrDocument docl = new SolrDocument();
-            for(NagiosMetric nm: list) {
-                docl.addField(nm.name, nm.value);
+        synchronized (metrics) {
+            ArrayList<NagiosMetric> list = metrics.get(host);
+            if (list != null) {
+                SolrDocument docl = new SolrDocument();
+                for (NagiosMetric nm : list) {
+                    docl.addField(nm.name, nm.value);
+                }
+                dest = CommonResources.syncFields("nag", docl, dest);
             }
-           dest = CommonResources.syncFields("nag", docl, dest);
         }
         return dest;
     }

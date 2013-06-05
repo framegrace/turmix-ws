@@ -2,6 +2,7 @@ package com.ideeli.turmix;
 
 import com.ideeli.turmix.indexer.IndexerTask;
 import com.ideeli.turmix.indexer.IndexerPlugin;
+import com.ideeli.turmix.indexer.plugins.NagiosIndexerPlugin;
 import com.ideeli.turmix.indexer.plugins.PuppetDBIndexerPlugin;
 import com.ideeli.turmix.indexer.plugins.PuppetDashboardIndexerPlugin;
 import com.jolbox.bonecp.BoneCP;
@@ -270,5 +271,6 @@ public class CommonResources {
     private static void initializeIndexer() throws TurmixException {
         CommonResources.addIndexerPlugin(new PuppetDBIndexerPlugin());
         CommonResources.addIndexerPlugin(new PuppetDashboardIndexerPlugin());
+        CommonResources.addIndexerPlugin(new NagiosIndexerPlugin());
     }
 }
