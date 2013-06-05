@@ -28,6 +28,7 @@ public class Provision {
     @Produces("text/html")
     public String newNode(@QueryParam("host") String host,
             @DefaultValue("") @QueryParam("classes") String classes,
+            @DefaultValue("") @QueryParam("groups") String groups,
             @DefaultValue("-") @QueryParam("desc") String desc) throws IOException {
         String err = "{\"retcode\": 0}";
         Connection c = null;
@@ -35,7 +36,7 @@ public class Provision {
             
             c = CommonResources.getConnectionPool().getConnection();
             c.setAutoCommit(false);
-            int retcode = CommonResources.getDba().provisionMode(c, host, desc, classes);
+            int retcode = CommonResources.getDba().provisionMode(c, host, desc, classes,groups);
             err = "{\"retcode\": 0,\"id\":"+retcode+"}";
             c.commit();
             

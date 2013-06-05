@@ -33,13 +33,18 @@ public class DashboardActions {
     static String GET_ALL_VARS = "select p.key,p.value from parameters p,nodes n where p.parameterable_id=n.id and p.parameterable_type='Node' and n.name=?";
     static String SEARCH_NODES = "select parameterable_id,n.name from parameters p left join nodes n on (p.parameterable_id=n.id)";
     static String SEARCH_NODES_POST = "group by p.parameterable_id having count(parameterable_id)=? order by parameterable_id";
+    static String GETGROUP = "select * from node_groups where name=?";
+    static String ASSIGNGROUP = "insert into node_group_memberships values (null,?,?,now(),now())";
+    static String GETGROUPS   = "select m.id,g.name from node_group_memberships m inner join node_groups g on (g.id=m.node_group_id) where m.node_id=? and m.node_group_id=?";
     //Connection c = CommonResources.connectionPool.getConnection();
     //        c.setAutoCommit(false);
     ObjectMapper mapper = new ObjectMapper();
 
-    public int provisionMode(Connection c, String name, String desc, String classes_rw) throws SQLException, TurmixException {
+    public int provisionMode(Connection c, String name, String desc, String classes_rw, String groups_rw) throws SQLException, TurmixException {
+        if ("".equals(name)) throw new TurmixException("No name specified");
         int node_id = getNodeId(c, name);
         String[] classes = classes_rw.split(",");
+        String[] groups  = groups_rw.split(",");
         if (node_id == -1) {
             PreparedStatement node_stmt = c.prepareStatement(ADDNODE, Statement.RETURN_GENERATED_KEYS);
             node_stmt.setString(1, name);
@@ -52,6 +57,9 @@ public class DashboardActions {
             if (node_id != -1) {
                 for (String cls : classes) {
                     assignClass(c, cls, node_id);
+                }
+                for (String grp : groups) {
+                    assignGroup(c,grp,node_id);
                 }
             }
         } else {
@@ -71,14 +79,43 @@ public class DashboardActions {
         return -1;
     }
 
-    public void assignClass(Connection c, String cls, String node) throws SQLException {
+    public void assignClass(Connection c, String cls, String node) throws SQLException, TurmixException {
         int node_id = getNodeId(c, node);
         assignClass(c, cls, node_id);
-
     }
-
-    public void assignClass(Connection c, String cls, int node_id) throws SQLException {
-        int class_id = addClass(c, cls);
+    
+    public void assignGroup(Connection c, String cls, String node) throws SQLException, TurmixException {
+        int node_id = getNodeId(c, node);
+        assignGroup(c, cls, node_id);
+    }
+    
+    public void assignGroup(Connection c, String grp, int node_id) throws SQLException, TurmixException {
+        int group_id = getGroup(c, grp);
+        PreparedStatement get_stmt = c.prepareStatement(GETGROUPS);
+        get_stmt.setInt(1, node_id);
+        get_stmt.setInt(2, group_id);
+        ResultSet rs = get_stmt.executeQuery();
+        if (!rs.next()) {
+            PreparedStatement cnr_stmt = c.prepareStatement(ASSIGNGROUP);
+            cnr_stmt.setInt(1, node_id);
+            cnr_stmt.setInt(2, group_id);
+            cnr_stmt.executeUpdate();
+        }
+    }
+    
+    public int getGroup(Connection c,String grp) throws SQLException, TurmixException {
+        PreparedStatement get_stmt = c.prepareStatement(GETGROUP);
+        get_stmt.setString(1, grp);
+        ResultSet rs=get_stmt.executeQuery();
+        int id=-1;
+        if (rs.next()) {
+            id=rs.getInt("id");
+        } else throw new TurmixException("Group do not exists");
+        return id;
+    }
+    
+    public void assignClass(Connection c, String cls, int node_id) throws SQLException, TurmixException {
+        int class_id = getDBClass(c, cls);
         PreparedStatement get_stmt = c.prepareStatement(GETCLASSONNODE);
         get_stmt.setInt(1, node_id);
         get_stmt.setInt(2, class_id);
@@ -91,6 +128,17 @@ public class DashboardActions {
         }
     }
 
+    public int getDBClass(Connection c,String classname) throws SQLException, TurmixException {
+        PreparedStatement rc = c.prepareStatement(GETCLASS);
+        rc.setString(1, classname);
+        ResultSet class_rs = rc.executeQuery();
+        int class_id = -1;
+        if (class_rs.next()) {
+            class_id = class_rs.getInt("id");
+        } else throw new TurmixException("Class do not exists");
+        return class_id;
+    }
+        
     public void addVar(Connection c, String name, String value, String node) throws SQLException, TurmixException {
         int node_id = getNodeId(c, node);
         if (node_id != -1) {
@@ -145,22 +193,14 @@ public class DashboardActions {
         return ret;
     }
 
-    public int addClass(Connection c, String classname) throws SQLException {
-        PreparedStatement rc = c.prepareStatement(GETCLASS);
-        rc.setString(1, classname);
-        ResultSet class_rs = rc.executeQuery();
-        int class_id = -1;
-        if (class_rs.next()) {
-            class_id = class_rs.getInt("id");
-        }
-        if (class_id == -1) {
-            PreparedStatement class_stmt = c.prepareStatement(ADDCLASS, Statement.RETURN_GENERATED_KEYS);
-            class_stmt.setString(1, classname);
-            class_stmt.executeUpdate();
-            ResultSet rsc = class_stmt.getGeneratedKeys();
-            if (rsc.next()) {
-                class_id = rsc.getInt(1);
-            }
+    public int addClass(Connection c, String classname) throws SQLException, TurmixException {
+        int class_id = getDBClass(c, classname);
+        PreparedStatement class_stmt = c.prepareStatement(ADDCLASS, Statement.RETURN_GENERATED_KEYS);
+        class_stmt.setString(1, classname);
+        class_stmt.executeUpdate();
+        ResultSet rsc = class_stmt.getGeneratedKeys();
+        if (rsc.next()) {
+            class_id = rsc.getInt(1);
         }
         return class_id;
     }
