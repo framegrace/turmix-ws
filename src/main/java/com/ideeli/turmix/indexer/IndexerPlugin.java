@@ -6,6 +6,7 @@ package com.ideeli.turmix.indexer;
 
 import com.ideeli.turmix.TurmixException;
 import java.util.HashSet;
+import java.util.Set;
 import org.apache.solr.common.SolrDocument;
 
 /**
@@ -15,6 +16,6 @@ import org.apache.solr.common.SolrDocument;
 public interface IndexerPlugin {
     
     public String getName();
-    public HashSet listNodes() throws TurmixException;
+    public Set listNodes() throws TurmixException;
     public SolrDocument syncDocFields(String host,SolrDocument dest) throws TurmixException;
 }

@@ -8,6 +8,7 @@ import com.ideeli.turmix.indexer.plugins.PuppetDashboardIndexerPlugin;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -38,10 +39,10 @@ public class IndexerTask {
         try {
             Collection<IndexerPlugin> plugins = CommonResources.getIndexerPlugins().values();
             Logger.getLogger(IndexerTask.class.getName()).log(Level.INFO, "-- Refreshing --");
-            HashSet<String> nodes = new HashSet();
+            Set<String> nodes = new HashSet();
             for (IndexerPlugin ip : plugins) {
                 try {
-                    HashSet mset = ip.listNodes();
+                    Set mset = ip.listNodes();
                     nodes.addAll(mset);
                 } catch (Exception e) {
                     Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error getting node list on " + ip.getName() + " IndexerPlugin",e);
@@ -49,7 +50,7 @@ public class IndexerTask {
             }            
             int hosts = nodes.size();
             for (String host : nodes) {
-                System.out.println("    ->"+host);                boolean done = false;
+                boolean done = false;
                 // Optimistic locking 
                 while (!done) {
                     SolrQuery query = new SolrQuery();
@@ -79,13 +80,14 @@ public class IndexerTask {
                         if (se.getMessage().contains("version conflict")) {
                             System.out.println("Node changed while updating. Repeating.");
                         } else {
-                            throw se;
+                            Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error processing "+host,se);
                         }
                     }
                 }
             }
+            
             CommonResources.getServer().commit();
-            Logger.getLogger(IndexerTask.class.getName()).log(Level.INFO, "-- Refreshed OK --");
+            Logger.getLogger(IndexerTask.class.getName()).log(Level.INFO, "-- "+hosts+" hosts Refreshed OK --");
         } catch (SolrServerException | TurmixException | IOException | RuntimeException ex) {
             Logger.getLogger(IndexerTask.class.getName()).log(Level.SEVERE, "Error updating", ex);
         }
