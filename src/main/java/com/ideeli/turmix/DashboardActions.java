@@ -1,5 +1,6 @@
 package com.ideeli.turmix;
 
+import com.ideeli.turmix.resources.Provision;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -8,6 +9,8 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -45,6 +48,7 @@ public class DashboardActions {
         int node_id = getNodeId(c, name);
         String[] classes = classes_rw.split(",");
         String[] groups  = groups_rw.split(",");
+        Logger.getLogger(Provision.class.getName()).log(Level.INFO,"Provision : name="+name+" classes_rw="+classes_rw+" groups_rw="+groups_rw);
         if (node_id == -1) {
             PreparedStatement node_stmt = c.prepareStatement(ADDNODE, Statement.RETURN_GENERATED_KEYS);
             node_stmt.setString(1, name);
@@ -56,10 +60,11 @@ public class DashboardActions {
             }
             if (node_id != -1) {
                 for (String cls : classes) {
-                    assignClass(c, cls, node_id);
+                    Logger.getLogger(Provision.class.getName()).log(Level.INFO,"Trying to assignClass : "+cls);
+                    if (!"".equals(cls)) assignClass(c, cls, node_id);
                 }
                 for (String grp : groups) {
-                    assignGroup(c,grp,node_id);
+                    if (!"".equals(grp)) assignGroup(c,grp,node_id);
                 }
             }
         } else {
@@ -161,6 +166,7 @@ public class DashboardActions {
             cnr_stmt.setString(1, value);
             cnr_stmt.setInt(2, node_id);
             cnr_stmt.setString(3, name);
+            cnr_stmt.executeUpdate();
         }
     }
 
@@ -241,7 +247,7 @@ public class DashboardActions {
         JsonNode rootNode = mapper.createObjectNode();
         if (rsc.next()) {
             ((ObjectNode) rootNode).put(param, rsc.getString(2));
-        }
+        } 
         return rootNode;
     }
 

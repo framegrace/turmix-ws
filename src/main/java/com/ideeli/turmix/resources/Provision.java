@@ -54,6 +54,14 @@ public class Provision {
         } catch (TurmixException ex) {
             Logger.getLogger(Provision.class.getName()).log(Level.INFO, ex.getMessage());
             err = "{\"retcode\": 103,\"error\":\"" + ex.getMessage() + "\"}";
+            if (c != null) {
+                try {
+                    c.rollback();
+                } catch (SQLException e) {
+                    Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, e);
+                    err = "{\"retcode\": 104,\"error\":\"" + e.getMessage() + "\"}";
+                }
+            }
         } finally {
             if (c != null) {
                 try {
