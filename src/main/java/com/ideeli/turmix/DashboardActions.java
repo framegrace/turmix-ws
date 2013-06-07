@@ -68,7 +68,7 @@ public class DashboardActions {
                 }
             }
         } else {
-            throw new TurmixException("Node already exists (id:" + node_id + ")");
+            throw new TurmixException("Node "+name+" already exists (id:" + node_id + ")");
         }
         return node_id;
     }
@@ -115,7 +115,7 @@ public class DashboardActions {
         int id=-1;
         if (rs.next()) {
             id=rs.getInt("id");
-        } else throw new TurmixException("Group do not exists");
+        } else throw new TurmixException("Group "+grp+" do not exists");
         return id;
     }
     
@@ -140,7 +140,7 @@ public class DashboardActions {
         int class_id = -1;
         if (class_rs.next()) {
             class_id = class_rs.getInt("id");
-        } else throw new TurmixException("Class do not exists");
+        } else throw new TurmixException("Class "+classname+" do not exists");
         return class_id;
     }
         
@@ -149,7 +149,7 @@ public class DashboardActions {
         if (node_id != -1) {
             addVar(c, name, value, node, node_id);
         } else {
-            throw new TurmixException("Node do not exists");
+            throw new TurmixException("Node "+node+" do not exists");
         }
     }
 
