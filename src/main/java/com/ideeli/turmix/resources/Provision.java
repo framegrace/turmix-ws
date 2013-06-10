@@ -39,13 +39,14 @@ public class Provision {
             int retcode = CommonResources.getDba().provisionMode(c, host, desc, classes,groups);
             err = "{\"retcode\": 0,\"id\":"+retcode+"}";
             c.commit();
-            
+            c.close();
         } catch (SQLException ex) {
             Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, ex);
             err = "{\"retcode\": 101,\"error\":\"" + ex.getMessage() + "\"}";
             if (c != null) {
                 try {
                     c.rollback();
+                    c.close();
                 } catch (SQLException ex1) {
                     Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, ex1);
                     err = "{\"retcode\": 102,\"error\":\"" + ex1.getMessage() + "\"}";
@@ -57,9 +58,10 @@ public class Provision {
             if (c != null) {
                 try {
                     c.rollback();
+                    c.close();
                 } catch (SQLException e) {
                     Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, e);
-                    err = "{\"retcode\": 104,\"error\":\"" + e.getMessage() + "\"}";
+                    err = "{\"retcode\": 102,\"error\":\"" + e.getMessage() + "\"}";
                 }
             }
         } finally {
@@ -68,7 +70,7 @@ public class Provision {
                     c.close();
                 } catch (SQLException e) {
                     Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, e);
-                    err = "{\"retcode\": 104,\"error\":\"" + e.getMessage() + "\"}";
+                    err = "{\"retcode\": 102,\"error\":\"" + e.getMessage() + "\"}";
                 }
             }
         }

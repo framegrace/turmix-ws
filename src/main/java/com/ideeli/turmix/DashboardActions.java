@@ -42,6 +42,7 @@ public class DashboardActions {
     //Connection c = CommonResources.connectionPool.getConnection();
     //        c.setAutoCommit(false);
     ObjectMapper mapper = new ObjectMapper();
+    private boolean autoCreateClasses=true;
 
     public int provisionMode(Connection c, String name, String desc, String classes_rw, String groups_rw) throws SQLException, TurmixException {
         if ("".equals(name)) throw new TurmixException("No name specified");
@@ -64,6 +65,7 @@ public class DashboardActions {
                     if (!"".equals(cls)) assignClass(c, cls, node_id);
                 }
                 for (String grp : groups) {
+                    Logger.getLogger(Provision.class.getName()).log(Level.INFO,"Trying to assignGroup : "+grp);
                     if (!"".equals(grp)) assignGroup(c,grp,node_id);
                 }
             }
@@ -120,7 +122,14 @@ public class DashboardActions {
     }
     
     public void assignClass(Connection c, String cls, int node_id) throws SQLException, TurmixException {
-        int class_id = getDBClass(c, cls);
+        int class_id=-1;
+        try {
+            class_id = getDBClass(c, cls);
+        } catch (TurmixException te) {
+            if (autoCreateClasses) {
+                class_id=addClass(c, cls);
+            }
+        }
         PreparedStatement get_stmt = c.prepareStatement(GETCLASSONNODE);
         get_stmt.setInt(1, node_id);
         get_stmt.setInt(2, class_id);
