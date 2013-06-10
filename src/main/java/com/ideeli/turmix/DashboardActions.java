@@ -45,43 +45,75 @@ public class DashboardActions {
     private boolean autoCreateClasses=true;
 
     public int provisionMode(Connection c, String name, String desc, String classes_rw, String groups_rw) throws SQLException, TurmixException {
-        if ("".equals(name)) throw new TurmixException("No name specified");
+        if ("".equals(name)) {
+            throw new TurmixException("No name specified");
+        }
         int node_id = getNodeId(c, name);
         String[] classes = classes_rw.split(",");
-        String[] groups  = groups_rw.split(",");
-        Logger.getLogger(Provision.class.getName()).log(Level.INFO,"Provision : name="+name+" classes_rw="+classes_rw+" groups_rw="+groups_rw);
+        String[] groups = groups_rw.split(",");
+        Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Provision : name=" + name + " classes_rw=" + classes_rw + " groups_rw=" + groups_rw);
         if (node_id == -1) {
-            PreparedStatement node_stmt = c.prepareStatement(ADDNODE, Statement.RETURN_GENERATED_KEYS);
-            node_stmt.setString(1, name);
-            node_stmt.setString(2, desc);
-            node_stmt.executeUpdate();
-            ResultSet rs = node_stmt.getGeneratedKeys();
-            if (rs.next()) {
-                node_id = rs.getInt(1);
-            }
-            if (node_id != -1) {
-                for (String cls : classes) {
-                    Logger.getLogger(Provision.class.getName()).log(Level.INFO,"Trying to assignClass : "+cls);
-                    if (!"".equals(cls)) assignClass(c, cls, node_id);
+            PreparedStatement node_stmt = null;
+            ResultSet rs = null;
+            try {
+                node_stmt = c.prepareStatement(ADDNODE, Statement.RETURN_GENERATED_KEYS);
+                node_stmt.setString(1, name);
+                node_stmt.setString(2, desc);
+                node_stmt.executeUpdate();
+                rs = node_stmt.getGeneratedKeys();
+                if (rs.next()) {
+                    node_id = rs.getInt(1);
                 }
-                for (String grp : groups) {
-                    Logger.getLogger(Provision.class.getName()).log(Level.INFO,"Trying to assignGroup : "+grp);
-                    if (!"".equals(grp)) assignGroup(c,grp,node_id);
+                if (node_id != -1) {
+                    for (String cls : classes) {
+                        Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to assignClass : " + cls);
+                        if (!"".equals(cls)) {
+                            assignClass(c, cls, node_id);
+                        }
+                    }
+                    for (String grp : groups) {
+                        Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to assignGroup : " + grp);
+                        if (!"".equals(grp)) {
+                            assignGroup(c, grp, node_id);
+                        }
+                    }
+                }
+            } catch (SQLException sqe) {
+                throw sqe;
+            } finally {
+                if (node_stmt != null) {
+                    node_stmt.close();
+                }
+                if (rs != null) {
+                    rs.close();
                 }
             }
         } else {
-            throw new TurmixException("Node "+name+" already exists (id:" + node_id + ")");
+            throw new TurmixException("Node " + name + " already exists (id:" + node_id + ")");
         }
         return node_id;
     }
 
     public int getNodeId(Connection c, String node) throws SQLException {
-        PreparedStatement vars = c.prepareStatement(GETNODE);
-        vars.setString(1, node);
-        vars.executeQuery();
-        ResultSet rsc = vars.getResultSet();
-        if (rsc.next()) {
-            return rsc.getInt("id");
+        PreparedStatement vars = null;
+        ResultSet rsc = null;
+        try {
+            vars = c.prepareStatement(GETNODE);
+            vars.setString(1, node);
+            vars.executeQuery();
+            rsc = vars.getResultSet();
+            if (rsc.next()) {
+                return rsc.getInt("id");
+            }
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+            if (vars != null) {
+                vars.close();
+            }
+            if (rsc != null) {
+                rsc.close();
+            }
         }
         return -1;
     }
@@ -90,66 +122,131 @@ public class DashboardActions {
         int node_id = getNodeId(c, node);
         assignClass(c, cls, node_id);
     }
-    
+
     public void assignGroup(Connection c, String cls, String node) throws SQLException, TurmixException {
         int node_id = getNodeId(c, node);
         assignGroup(c, cls, node_id);
     }
-    
+
     public void assignGroup(Connection c, String grp, int node_id) throws SQLException, TurmixException {
         int group_id = getGroup(c, grp);
-        PreparedStatement get_stmt = c.prepareStatement(GETGROUPS);
-        get_stmt.setInt(1, node_id);
-        get_stmt.setInt(2, group_id);
-        ResultSet rs = get_stmt.executeQuery();
-        if (!rs.next()) {
-            PreparedStatement cnr_stmt = c.prepareStatement(ASSIGNGROUP);
-            cnr_stmt.setInt(1, node_id);
-            cnr_stmt.setInt(2, group_id);
-            cnr_stmt.executeUpdate();
-        }
-    }
-    
-    public int getGroup(Connection c,String grp) throws SQLException, TurmixException {
-        PreparedStatement get_stmt = c.prepareStatement(GETGROUP);
-        get_stmt.setString(1, grp);
-        ResultSet rs=get_stmt.executeQuery();
-        int id=-1;
-        if (rs.next()) {
-            id=rs.getInt("id");
-        } else throw new TurmixException("Group "+grp+" do not exists");
-        return id;
-    }
-    
-    public void assignClass(Connection c, String cls, int node_id) throws SQLException, TurmixException {
-        int class_id=-1;
+        PreparedStatement get_stmt = null;
+        ResultSet rs = null;
+        PreparedStatement cnr_stmt = null;
         try {
-            class_id = getDBClass(c, cls);
-        } catch (TurmixException te) {
-            if (autoCreateClasses) {
-                class_id=addClass(c, cls);
+            get_stmt = c.prepareStatement(GETGROUPS);
+            get_stmt.setInt(1, node_id);
+            get_stmt.setInt(2, group_id);
+            rs = get_stmt.executeQuery();
+            if (!rs.next()) {
+                cnr_stmt = c.prepareStatement(ASSIGNGROUP);
+                cnr_stmt.setInt(1, node_id);
+                cnr_stmt.setInt(2, group_id);
+                cnr_stmt.executeUpdate();
             }
-        }
-        PreparedStatement get_stmt = c.prepareStatement(GETCLASSONNODE);
-        get_stmt.setInt(1, node_id);
-        get_stmt.setInt(2, class_id);
-        ResultSet rs = get_stmt.executeQuery();
-        if (!rs.next()) {
-            PreparedStatement cnr_stmt = c.prepareStatement(CLASSONNODE);
-            cnr_stmt.setInt(1, node_id);
-            cnr_stmt.setInt(2, class_id);
-            cnr_stmt.executeUpdate();
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+            if (get_stmt != null) {
+                get_stmt.close();
+            }
+            if (cnr_stmt != null) {
+                cnr_stmt.close();
+            }
         }
     }
 
-    public int getDBClass(Connection c,String classname) throws SQLException, TurmixException {
-        PreparedStatement rc = c.prepareStatement(GETCLASS);
-        rc.setString(1, classname);
-        ResultSet class_rs = rc.executeQuery();
+    public int getGroup(Connection c, String grp) throws SQLException, TurmixException {
+        int id = -1;
+        PreparedStatement get_stmt = null;
+        ResultSet rs = null;
+        try {
+            get_stmt = c.prepareStatement(GETGROUP);
+            get_stmt.setString(1, grp);
+            rs = get_stmt.executeQuery();
+            if (rs.next()) {
+                id = rs.getInt("id");
+            } else {
+                throw new TurmixException("Group " + grp + " do not exists");
+            }
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (get_stmt != null) {
+                get_stmt.close();
+            }
+            if (rs != null) {
+                rs.close();
+            }
+        }
+        return id;
+    }
+
+    public void assignClass(Connection c, String cls, int node_id) throws SQLException, TurmixException {
         int class_id = -1;
-        if (class_rs.next()) {
-            class_id = class_rs.getInt("id");
-        } else throw new TurmixException("Class "+classname+" do not exists");
+        class_id = getDBClass(c, cls);
+
+        if (class_id == -1) {
+            if (autoCreateClasses) {
+                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to Create class : " + cls);
+                class_id = addClass(c, cls);
+            } else {
+                throw new TurmixException("Class " + cls + " do not exists");
+            }
+        }
+        PreparedStatement get_stmt = null;
+        ResultSet rs = null;
+        PreparedStatement cnr_stmt = null;
+        try {
+            get_stmt = c.prepareStatement(GETCLASSONNODE);
+            get_stmt.setInt(1, node_id);
+            get_stmt.setInt(2, class_id);
+            rs = get_stmt.executeQuery();
+            if (!rs.next()) {
+                cnr_stmt = c.prepareStatement(CLASSONNODE);
+                cnr_stmt.setInt(1, node_id);
+                cnr_stmt.setInt(2, class_id);
+                cnr_stmt.executeUpdate();
+            }
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (rs != null) {
+                rs.close();
+            }
+            if (get_stmt != null) {
+                get_stmt.close();
+            }
+            if (cnr_stmt != null) {
+                cnr_stmt.close();
+            }
+        }
+    }
+
+    public int getDBClass(Connection c, String classname) throws SQLException {
+        int class_id = -1;
+        PreparedStatement rc = null;
+        ResultSet class_rs = null;
+        try {
+            rc = c.prepareStatement(GETCLASS);
+            rc.setString(1, classname);
+            class_rs = rc.executeQuery();
+            if (class_rs.next()) {
+                class_id = class_rs.getInt("id");
+            }
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (class_rs != null) {
+                class_rs.close();
+            }
+            if (rc != null) {
+                rc.close();
+            }
+        }
         return class_id;
     }
         
@@ -164,18 +261,27 @@ public class DashboardActions {
 
     public void addVar(Connection c, String name, String value, String node, int node_id) throws SQLException, TurmixException {
         JsonNode oldvalue = getVar(c, node, name);
-        if (!oldvalue.has(name)) {
-            PreparedStatement cnr_stmt = c.prepareStatement(ADDVAR);
-            cnr_stmt.setString(1, name);
-            cnr_stmt.setString(2, value);
-            cnr_stmt.setInt(3, node_id);
-            cnr_stmt.executeUpdate();
-        } else {
-            PreparedStatement cnr_stmt = c.prepareStatement(UPDATEVAR);
-            cnr_stmt.setString(1, value);
-            cnr_stmt.setInt(2, node_id);
-            cnr_stmt.setString(3, name);
-            cnr_stmt.executeUpdate();
+        PreparedStatement cnr_stmt = null;
+        try {
+            if (!oldvalue.has(name)) {
+                cnr_stmt = c.prepareStatement(ADDVAR);
+                cnr_stmt.setString(1, name);
+                cnr_stmt.setString(2, value);
+                cnr_stmt.setInt(3, node_id);
+                cnr_stmt.executeUpdate();
+            } else {
+                cnr_stmt = c.prepareStatement(UPDATEVAR);
+                cnr_stmt.setString(1, value);
+                cnr_stmt.setInt(2, node_id);
+                cnr_stmt.setString(3, name);
+                cnr_stmt.executeUpdate();
+            }
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (cnr_stmt != null) {
+                cnr_stmt.close();
+            }
         }
     }
 
@@ -198,77 +304,164 @@ public class DashboardActions {
         } else {
             filter += ")";
         }
-        PreparedStatement vars = c.prepareStatement(SEARCH_NODES + filter + SEARCH_NODES_POST);
-        vars.setInt(1, terms);
-        vars.executeQuery();
-        ResultSet rsc = vars.getResultSet();
-        while (rsc.next()) {
-            ret.add(rsc.getString(2));
+        PreparedStatement vars = null;
+        ResultSet rsc = null;
+        try {
+            vars = c.prepareStatement(SEARCH_NODES + filter + SEARCH_NODES_POST);
+            vars.setInt(1, terms);
+            vars.executeQuery();
+            rsc = vars.getResultSet();
+            while (rsc.next()) {
+                ret.add(rsc.getString(2));
+            }
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (vars != null) {
+                vars.close();
+            }
+            if (rsc != null) {
+                rsc.close();
+            }
         }
         return ret;
     }
 
     public int addClass(Connection c, String classname) throws SQLException, TurmixException {
+        Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Addng Class : " + classname);
         int class_id = getDBClass(c, classname);
-        PreparedStatement class_stmt = c.prepareStatement(ADDCLASS, Statement.RETURN_GENERATED_KEYS);
-        class_stmt.setString(1, classname);
-        class_stmt.executeUpdate();
-        ResultSet rsc = class_stmt.getGeneratedKeys();
-        if (rsc.next()) {
-            class_id = rsc.getInt(1);
+        PreparedStatement class_stmt = null;
+        ResultSet rsc = null;
+        if (class_id == -1) {
+            try {
+                class_stmt = c.prepareStatement(ADDCLASS, Statement.RETURN_GENERATED_KEYS);
+                class_stmt.setString(1, classname);
+                class_stmt.executeUpdate();
+                rsc = class_stmt.getGeneratedKeys();
+                if (rsc.next()) {
+                    class_id = rsc.getInt(1);
+                }
+                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Added Class : " + class_id);
+            } catch (SQLException sqe) {
+                throw sqe;
+            } finally {
+                if (class_stmt != null) {
+                    class_stmt.close();
+                }
+                if (rsc != null) {
+                    rsc.close();
+                }
+            }
+        } else {
+            throw new TurmixException("Class " + classname + " already exists");
         }
         return class_id;
     }
 
     public ArrayNode getClasses(Connection c, String node) throws SQLException {
-        PreparedStatement classes = c.prepareStatement(GETCLASSES);
-        classes.setString(1, node);
-        classes.executeQuery();
-        ResultSet rsc = classes.getResultSet();
-        ArrayNode ret = mapper.createArrayNode();
-        while (rsc.next()) {
-            JsonNode rowNode = mapper.createObjectNode();
-            ((ObjectNode) rowNode).put("name", rsc.getString(2));
-            ret.add(rowNode);
+        PreparedStatement classes = null;
+        ResultSet rsc = null;
+        ArrayNode ret = mapper.createArrayNode();;
+        try {
+            classes = c.prepareStatement(GETCLASSES);
+            classes.setString(1, node);
+            classes.executeQuery();
+            rsc = classes.getResultSet();
+            while (rsc.next()) {
+                JsonNode rowNode = mapper.createObjectNode();
+                ((ObjectNode) rowNode).put("name", rsc.getString(2));
+                ret.add(rowNode);
+            }
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (classes != null) {
+                classes.close();
+            }
+            if (rsc != null) {
+                rsc.close();
+            }
         }
         return ret;
     }
 
     public ArrayNode listNodes(Connection c) throws SQLException {
-        PreparedStatement classes = c.prepareStatement(GETNODES);
-        classes.executeQuery();
-        ResultSet rsc = classes.getResultSet();
+        PreparedStatement classes=null;
+        ResultSet rsc = null;
         ArrayNode ret = mapper.createArrayNode();
-        while (rsc.next()) {
-            JsonNode rowNode = mapper.createObjectNode();
-            ((ObjectNode) rowNode).put("name", rsc.getString("name"));
-            ret.add(rowNode);
+        try {
+            classes = c.prepareStatement(GETNODES);
+            classes.executeQuery();
+            rsc = classes.getResultSet();
+
+            while (rsc.next()) {
+                JsonNode rowNode = mapper.createObjectNode();
+                ((ObjectNode) rowNode).put("name", rsc.getString("name"));
+                ret.add(rowNode);
+            }
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (classes != null) {
+                classes.close();
+            }
+            if (rsc != null) {
+                rsc.close();
+            }
         }
         return ret;
     }
 
     public JsonNode getVar(Connection c, String node, String param) throws SQLException {
-        PreparedStatement vars = c.prepareStatement(GETVAR);
-        vars.setString(1, node);
-        vars.setString(2, param);
-        vars.executeQuery();
-        ResultSet rsc = vars.getResultSet();
+        PreparedStatement vars = null;
+        ResultSet rsc = null;
         JsonNode rootNode = mapper.createObjectNode();
-        if (rsc.next()) {
-            ((ObjectNode) rootNode).put(param, rsc.getString(2));
-        } 
+        try {
+            vars = c.prepareStatement(GETVAR);
+            vars.setString(1, node);
+            vars.setString(2, param);
+            vars.executeQuery();
+            rsc = vars.getResultSet();
+
+            if (rsc.next()) {
+                ((ObjectNode) rootNode).put(param, rsc.getString(2));
+            }
+
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (vars != null) {
+                vars.close();
+            }
+            if (rsc != null) {
+                rsc.close();
+            }
+        }
         return rootNode;
     }
 
     public JsonNode getAllVars(Connection c, String node) throws SQLException {
-        HashMap<String, String> ret = new HashMap<>();
-        PreparedStatement vars = c.prepareStatement(GET_ALL_VARS);
-        vars.setString(1, node);
-        vars.executeQuery();
-        ResultSet rsc = vars.getResultSet();
+        PreparedStatement vars = null;
+        ResultSet rsc = null;
         JsonNode rootNode = mapper.createObjectNode();
-        while (rsc.next()) {
-            ((ObjectNode) rootNode).put(rsc.getString(1), rsc.getString(2));
+        try {
+            HashMap<String, String> ret = new HashMap<>();
+            vars = c.prepareStatement(GET_ALL_VARS);
+            vars.setString(1, node);
+            vars.executeQuery();
+            rsc = vars.getResultSet();
+            while (rsc.next()) {
+                ((ObjectNode) rootNode).put(rsc.getString(1), rsc.getString(2));
+            }
+        } catch (SQLException sqe) {
+            throw sqe;
+        } finally {
+            if (vars != null) {
+                vars.close();
+            }
+            if (rsc != null) {
+                rsc.close();
+            }
         }
         return rootNode;
     }
