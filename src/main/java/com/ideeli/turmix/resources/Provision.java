@@ -35,17 +35,17 @@ public class Provision {
         try {
             
             c = CommonResources.getConnectionPool().getConnection();
-            c.setAutoCommit(false);
+            c.setAutoCommit(true);
             int retcode = CommonResources.getDba().provisionMode(c, host, desc, classes,groups);
             err = "{\"retcode\": 0,\"id\":"+retcode+"}";
-            c.commit();
+            //c.commit();
             c.close();
         } catch (SQLException ex) {
             Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, ex);
             err = "{\"retcode\": 101,\"error\":\"" + ex.getMessage() + "\"}";
             if (c != null) {
                 try {
-                    c.rollback();
+                    //c.rollback();
                     c.close();
                 } catch (SQLException ex1) {
                     Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, ex1);
@@ -57,7 +57,7 @@ public class Provision {
             err = "{\"retcode\": 103,\"error\":\"" + ex.getMessage() + "\"}";
             if (c != null) {
                 try {
-                    c.rollback();
+                    //c.rollback();
                     c.close();
                 } catch (SQLException e) {
                     Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, e);

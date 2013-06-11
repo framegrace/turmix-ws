@@ -103,6 +103,8 @@ public class CommonResources {
             config.setJdbcUrl(configFile.getProperty("jdbc.url"));
             config.setUsername(configFile.getProperty("jdbc.user"));
             config.setPassword(configFile.getProperty("jdbc.pwd"));
+            config.setCloseOpenStatements(true);
+            config.setDetectUnclosedStatements(true);
             config.setMinConnectionsPerPartition(configFile.getProperty("jdbc.pool.min") == null ? 5 : new Integer(configFile.getProperty("jdbc.pool.min")));
             config.setMaxConnectionsPerPartition(configFile.getProperty("jdbc.pool.max") == null ? 10 : new Integer(configFile.getProperty("jdbc.pool.min")));
             config.setPartitionCount(1);

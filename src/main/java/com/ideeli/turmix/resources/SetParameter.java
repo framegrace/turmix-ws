@@ -28,16 +28,16 @@ public class SetParameter {
         Connection c = null;
         try {
             c = CommonResources.getConnectionPool().getConnection();
-            c.setAutoCommit(false);
+            c.setAutoCommit(true);
             CommonResources.getDba().addVar(c, name, value, node);
-            c.commit();
+            //c.commit();
             c.close();
         } catch (SQLException ex) {
             Logger.getLogger(SetParameter.class.getName()).log(Level.SEVERE, null, ex);
             err = "{\"retcode\": 101,\"error\":\"" + ex.getMessage() + "\"}";
             if (c != null) {
                 try {
-                    c.rollback();
+                    //c.rollback();
                     c.close();
                 } catch (SQLException ex1) {
                     Logger.getLogger(SetParameter.class.getName()).log(Level.SEVERE, null, ex1);
@@ -49,7 +49,7 @@ public class SetParameter {
             err = "{\"retcode\": 103,\"error\":\"" + ex.getMessage() + "\"}";
             if (c != null) {
                 try {
-                    c.rollback();
+                    //c.rollback();
                     c.close();
                 } catch (SQLException e) {
                     Logger.getLogger(Provision.class.getName()).log(Level.SEVERE, null, e);

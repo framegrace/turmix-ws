@@ -52,10 +52,10 @@ public class DashboardActions {
         String[] classes = classes_rw.split(",");
         String[] groups = groups_rw.split(",");
         Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Provision : name=" + name + " classes_rw=" + classes_rw + " groups_rw=" + groups_rw);
-        if (node_id == -1) {
-            PreparedStatement node_stmt = null;
-            ResultSet rs = null;
-            try {
+        PreparedStatement node_stmt = null;
+        ResultSet rs = null;
+        try {
+            if (node_id == -1) {
                 node_stmt = c.prepareStatement(ADDNODE, Statement.RETURN_GENERATED_KEYS);
                 node_stmt.setString(1, name);
                 node_stmt.setString(2, desc);
@@ -64,23 +64,26 @@ public class DashboardActions {
                 if (rs.next()) {
                     node_id = rs.getInt(1);
                 }
-                if (node_id != -1) {
-                    for (String cls : classes) {
-                        Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to assignClass : " + cls);
-                        if (!"".equals(cls)) {
-                            assignClass(c, cls, node_id);
-                        }
-                    }
-                    for (String grp : groups) {
-                        Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to assignGroup : " + grp);
-                        if (!"".equals(grp)) {
-                            assignGroup(c, grp, node_id);
-                        }
+            }
+
+            if (node_id != -1) {
+                for (String cls : classes) {
+                    Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to assignClass : " + cls);
+                    if (!"".equals(cls)) {
+                        assignClass(c, cls, node_id);
                     }
                 }
-            } catch (SQLException sqe) {
+                for (String grp : groups) {
+                    Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to assignGroup : " + grp);
+                    if (!"".equals(grp)) {
+                        assignGroup(c, grp, node_id);
+                    }
+                }
+            }
+            } catch (Exception sqe) {
                 throw sqe;
             } finally {
+                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Closing prov : " );
                 if (node_stmt != null) {
                     node_stmt.close();
                 }
@@ -88,9 +91,9 @@ public class DashboardActions {
                     rs.close();
                 }
             }
-        } else {
-            throw new TurmixException("Node " + name + " already exists (id:" + node_id + ")");
-        }
+//        else {
+//            throw new TurmixException("Node " + name + " already exists (id:" + node_id + ")");
+//        }
         return node_id;
     }
 
@@ -105,9 +108,10 @@ public class DashboardActions {
             if (rsc.next()) {
                 return rsc.getInt("id");
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw e;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Closing getNID : " );
             if (vars != null) {
                 vars.close();
             }
@@ -144,9 +148,10 @@ public class DashboardActions {
                 cnr_stmt.setInt(2, group_id);
                 cnr_stmt.executeUpdate();
             }
-        } catch (SQLException sqe) {
+        } catch (Exception sqe) {
             throw sqe;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing assign G : " );
             if (rs != null) {
                 rs.close();
             }
@@ -169,18 +174,20 @@ public class DashboardActions {
             rs = get_stmt.executeQuery();
             if (rs.next()) {
                 id = rs.getInt("id");
-            } else {
-                throw new TurmixException("Group " + grp + " do not exists");
-            }
-        } catch (SQLException sqe) {
+            } 
+        } catch (Exception sqe) {
             throw sqe;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getgrop : " );
             if (get_stmt != null) {
                 get_stmt.close();
             }
             if (rs != null) {
                 rs.close();
             }
+        }
+        if (id == -1) {
+            throw new TurmixException("Group " + grp + " do not exists");
         }
         return id;
     }
@@ -211,9 +218,10 @@ public class DashboardActions {
                 cnr_stmt.setInt(2, class_id);
                 cnr_stmt.executeUpdate();
             }
-        } catch (SQLException sqe) {
+        } catch (Exception sqe) {
             throw sqe;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing assign C : " );
             if (rs != null) {
                 rs.close();
             }
@@ -240,6 +248,8 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
+            
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getDB C : " );
             if (class_rs != null) {
                 class_rs.close();
             }
@@ -279,6 +289,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing addVar : " );
             if (cnr_stmt != null) {
                 cnr_stmt.close();
             }
@@ -317,6 +328,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing searchN : " );
             if (vars != null) {
                 vars.close();
             }
@@ -345,6 +357,7 @@ public class DashboardActions {
             } catch (SQLException sqe) {
                 throw sqe;
             } finally {
+                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing addClass : " );
                 if (class_stmt != null) {
                     class_stmt.close();
                 }
@@ -375,6 +388,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getClass : " );
             if (classes != null) {
                 classes.close();
             }
@@ -402,6 +416,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing listNodes : " );
             if (classes != null) {
                 classes.close();
             }
@@ -430,6 +445,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getVar : " );
             if (vars != null) {
                 vars.close();
             }
@@ -456,6 +472,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
+            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getAllVar : " );
             if (vars != null) {
                 vars.close();
             }

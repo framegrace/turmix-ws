@@ -30,7 +30,7 @@ public class SetNagiosMetric {
             nip.addMetric(node, name, value);
         } catch (TurmixException ex) {
             err = "{\"retcode\": 100,\"error\":\"" + ex.getMessage() + "\"}";
-            Logger.getLogger(SetNagiosMetric.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SetNagiosMetric.class.getName()).log(Level.SEVERE, ex.getMessage());
         }
         return err;
     }
