@@ -80,7 +80,7 @@ public class IndexerTask {
                         if (se.getMessage().contains("version conflict")) {
                             System.out.println("Node changed while updating. Repeating.");
                         } else {
-                            Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error processing "+host,se);
+                            Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error processing "+host+": "+se.getMessage());
                         }
                     }
                 }

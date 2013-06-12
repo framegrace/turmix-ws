@@ -65,7 +65,6 @@ public class DashboardActions {
                     node_id = rs.getInt(1);
                 }
             }
-
             if (node_id != -1) {
                 for (String cls : classes) {
                     Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to assignClass : " + cls);
@@ -151,7 +150,7 @@ public class DashboardActions {
         } catch (Exception sqe) {
             throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing assign G : " );
+            //Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing assign G : " );
             if (rs != null) {
                 rs.close();
             }
@@ -178,7 +177,7 @@ public class DashboardActions {
         } catch (Exception sqe) {
             throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getgrop : " );
+//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getgrop : " );
             if (get_stmt != null) {
                 get_stmt.close();
             }
@@ -221,7 +220,7 @@ public class DashboardActions {
         } catch (Exception sqe) {
             throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing assign C : " );
+//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing assign C : " );
             if (rs != null) {
                 rs.close();
             }
@@ -249,7 +248,7 @@ public class DashboardActions {
             throw sqe;
         } finally {
             
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getDB C : " );
+//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getDB C : " );
             if (class_rs != null) {
                 class_rs.close();
             }
@@ -289,7 +288,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing addVar : " );
+//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing addVar : " );
             if (cnr_stmt != null) {
                 cnr_stmt.close();
             }
@@ -328,7 +327,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing searchN : " );
+//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing searchN : " );
             if (vars != null) {
                 vars.close();
             }
@@ -357,7 +356,7 @@ public class DashboardActions {
             } catch (SQLException sqe) {
                 throw sqe;
             } finally {
-                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing addClass : " );
+//                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing addClass : " );
                 if (class_stmt != null) {
                     class_stmt.close();
                 }
@@ -388,7 +387,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getClass : " );
+//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getClass : " );
             if (classes != null) {
                 classes.close();
             }
@@ -416,7 +415,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing listNodes : " );
+//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing listNodes : " );
             if (classes != null) {
                 classes.close();
             }
@@ -445,7 +444,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getVar : " );
+//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getVar : " );
             if (vars != null) {
                 vars.close();
             }
@@ -472,7 +471,7 @@ public class DashboardActions {
         } catch (SQLException sqe) {
             throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getAllVar : " );
+//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getAllVar : " );
             if (vars != null) {
                 vars.close();
             }
