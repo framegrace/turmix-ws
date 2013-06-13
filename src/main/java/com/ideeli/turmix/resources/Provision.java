@@ -32,6 +32,10 @@ public class Provision {
             @DefaultValue("-") @QueryParam("desc") String desc) throws IOException {
         String err = "{\"retcode\": 0}";
         Connection c = null;
+        if ("".equals(host)) {
+            err = "{\"retcode\": 100,\"error\":\"No host especified\"";
+            return err;
+        }
         try {
             
             c = CommonResources.getConnectionPool().getConnection();
