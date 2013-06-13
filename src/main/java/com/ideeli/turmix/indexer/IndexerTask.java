@@ -39,55 +39,20 @@ public class IndexerTask {
         try {
             Collection<IndexerPlugin> plugins = CommonResources.getIndexerPlugins().values();
             Logger.getLogger(IndexerTask.class.getName()).log(Level.INFO, "-- Refreshing --");
-            Set<String> nodes = new HashSet();
             for (IndexerPlugin ip : plugins) {
-                try {
-                    Set mset = ip.listNodes();
-                    nodes.addAll(mset);
-                } catch (Exception e) {
-                    Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error getting node list on " + ip.getName() + " IndexerPlugin",e);
-                }
-            }            
-            int hosts = nodes.size();
-            for (String host : nodes) {
-                boolean done = false;
-                // Optimistic locking 
-                while (!done) {
-                    SolrQuery query = new SolrQuery();
-                    query.setQuery("host:" + host);
-                    QueryResponse rsp = CommonResources.getServer().query(query);
-                    SolrDocument dest;
-                    if (rsp.getResults().size() > 0) {
-                        dest = rsp.getResults().get(0);
-                    } else {
-                        dest = new SolrDocument();
-                        dest.setField("host", host);
-                    }
-                    for (IndexerPlugin ip : plugins) {
+                Set<String> nodes = ip.listNodes();
+                if (nodes.size() > 0) {
+                    for (String host : nodes) {
                         try {
-                            dest = ip.syncDocFields(host, dest);
-                            Logger.getLogger(IndexerTask.class.getName()).log(Level.INFO, "{0} Processed OK", ip.getName());
-                        } catch (Exception e) {
-                            Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error processing " + ip.getName() + " IndexerPlugin",e);
+                            indexHost(host, ip);
+                        } catch (SolrServerException | TurmixException | IOException | RuntimeException ex) {
+                            Logger.getLogger(IndexerTask.class.getName()).log(Level.SEVERE, "Error updating " + host + " on " + ip.getName() + " plugin", ex);
                         }
                     }
-                    SolrInputDocument sid = ClientUtils.toSolrInputDocument(dest);
-                    try {
-                        CommonResources.getServer().add(sid);
-                        done = true;
-                    } catch (SolrException se) {
-                        // Optimistic locking 
-                        if (se.getMessage().contains("version conflict")) {
-                            System.out.println("Node changed while updating. Repeating.");
-                        } else {
-                            Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error processing "+host+": "+se.getMessage());
-                        }
-                    }
+                    Logger.getLogger(IndexerTask.class.getName()).log(Level.INFO, "- " + nodes.size() + " hosts Refreshed for "+ip.getName()+" Indexer");
                 }
             }
-            
             CommonResources.getServer().commit();
-            Logger.getLogger(IndexerTask.class.getName()).log(Level.INFO, "-- "+hosts+" hosts Refreshed OK --");
         } catch (SolrServerException | TurmixException | IOException | RuntimeException ex) {
             Logger.getLogger(IndexerTask.class.getName()).log(Level.SEVERE, "Error updating", ex);
         }
@@ -103,6 +68,45 @@ public class IndexerTask {
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
                 Logger.getLogger(IndexerTask.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+
+    public void indexHost(String host, String plugin_name) throws IOException, TurmixException, SolrServerException {
+        indexHost(host, CommonResources.getIndexerPlugins().get(plugin_name));
+    }
+    
+    public void indexHost(String host, IndexerPlugin ip) throws IOException, TurmixException, SolrServerException {
+        boolean done = false;
+        // Optimistic locking 
+        while (!done) {
+            SolrQuery query = new SolrQuery();
+            query.setQuery("host:" + host);
+            QueryResponse rsp = CommonResources.getServer().query(query);
+            SolrDocument dest;
+            if (rsp.getResults().size() > 0) {
+                dest = rsp.getResults().get(0);
+            } else {
+                dest = new SolrDocument();
+                dest.setField("host", host);
+            }
+            try {
+                dest = ip.syncDocFields(host, dest);
+                Logger.getLogger(IndexerTask.class.getName()).log(Level.INFO, "{0} Processed OK", ip.getName());
+            } catch (Exception e) {
+                Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error processing " + ip.getName() + " IndexerPlugin", e);
+            }
+            SolrInputDocument sid = ClientUtils.toSolrInputDocument(dest);
+            try {
+                CommonResources.getServer().add(sid);
+                done = true;
+            } catch (SolrException se) {
+                // Optimistic locking 
+                if (se.getMessage().contains("version conflict")) {
+                    System.out.println("Node changed while updating. Repeating.");
+                } else {
+                    Logger.getLogger(IndexerTask.class.getName()).log(Level.WARNING, "Error processing "+host+": "+se.getMessage());
+                }
             }
         }
     }
