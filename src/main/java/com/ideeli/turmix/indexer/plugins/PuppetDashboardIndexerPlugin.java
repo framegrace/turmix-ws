@@ -28,6 +28,7 @@ public class PuppetDashboardIndexerPlugin implements IndexerPlugin {
         HashSet<String> result=new HashSet<>();
         try {
             c = CommonResources.getConnectionPool().getConnection();
+            c.setAutoCommit(true);
             ArrayNode an=CommonResources.getDba().listNodes(c);
             for (JsonNode jn : an) {
                 String value=jn.get("name").getTextValue();
@@ -52,6 +53,8 @@ public class PuppetDashboardIndexerPlugin implements IndexerPlugin {
         Connection c = null;
         try {
             c = CommonResources.getConnectionPool().getConnection();
+            c.setAutoCommit(true);
+            c.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
             JsonNode s = CommonResources.getDba().getAllVars(c, host);
             SolrDocument docl = new SolrDocument();
             Iterator<String> ite = s.getFieldNames();
@@ -73,7 +76,7 @@ public class PuppetDashboardIndexerPlugin implements IndexerPlugin {
             dest=CommonResources.syncFields("dsb", docl, dest);
             Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Data merged : "+dest.toString());
         } catch (SQLException ex) {
-            throw new TurmixException("Error on PuppetDashboard doc sync",ex);
+            //throw new TurmixException("Error on PuppetDashboard doc sync",ex);
         } finally {
             if (c!=null) {
                 try {
