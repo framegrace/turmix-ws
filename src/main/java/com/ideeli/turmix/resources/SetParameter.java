@@ -34,19 +34,19 @@ public class SetParameter {
     @Produces("text/html")
     public String set(@QueryParam("host") String node,
             @QueryParam("name") String name,
-            @QueryParam("value") String value,@QueryParam("index") @DefaultValue("true") String index) throws IOException {
+            @QueryParam("value") String value,@QueryParam("index") @DefaultValue("false") String index) throws IOException {
         String err = "{\"retcode\": 0}";
         Connection c = null;
         try {
             c = CommonResources.getConnectionPool().getConnection();
             c.setAutoCommit(true);
             CommonResources.getDba().addVar(c, name, value, node);
+            c.close();
             if ("true".equalsIgnoreCase(index)) {
                 CommonResources.getIndex().indexHost(node, "puppetDashboard");
                 CommonResources.getServer().commit();
             }
             //c.commit();
-            c.close();
         } catch (SQLException ex) {
             Logger.getLogger(SetParameter.class.getName()).log(Level.SEVERE, null, ex);
             err = "{\"retcode\": 101,\"error\":\"" + ex.getMessage() + "\"}";

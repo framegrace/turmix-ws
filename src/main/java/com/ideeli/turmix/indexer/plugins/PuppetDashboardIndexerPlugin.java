@@ -2,6 +2,7 @@ package com.ideeli.turmix.indexer.plugins;
 
 import com.ideeli.turmix.*;
 import com.ideeli.turmix.indexer.IndexerPlugin;
+import com.ideeli.turmix.resources.Provision;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashSet;
@@ -29,9 +30,9 @@ public class PuppetDashboardIndexerPlugin implements IndexerPlugin {
             c = CommonResources.getConnectionPool().getConnection();
             ArrayNode an=CommonResources.getDba().listNodes(c);
             for (JsonNode jn : an) {
-                result.add(jn.get("name").getTextValue());
+                String value=jn.get("name").getTextValue();
+                if (value!=null) result.add(value);
             }
-            return result;
         } catch (SQLException ex) {
             throw new TurmixException("Error on PuppetDashboard on node list", ex);
         } finally {
@@ -43,6 +44,7 @@ public class PuppetDashboardIndexerPlugin implements IndexerPlugin {
                 }
             }
         }
+        return result;
     }
 
     @Override
@@ -58,6 +60,7 @@ public class PuppetDashboardIndexerPlugin implements IndexerPlugin {
                 String value = s.get(name).getTextValue();
                 docl.setField(name, value);
             }
+            
             // A very strange way to update multi-valued solr fields (arrays)
             HashSet classes = new HashSet();
             ArrayNode classes_j=CommonResources.getDba().getClasses(c, host);
@@ -66,8 +69,9 @@ public class PuppetDashboardIndexerPlugin implements IndexerPlugin {
                 classes.add(n.get("name").getTextValue());
             };
             docl.setField("tags", classes);
+            Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Data from db : "+docl.toString());
             dest=CommonResources.syncFields("dsb", docl, dest);
-            return dest;
+            Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Data merged : "+dest.toString());
         } catch (SQLException ex) {
             throw new TurmixException("Error on PuppetDashboard doc sync",ex);
         } finally {
@@ -79,6 +83,7 @@ public class PuppetDashboardIndexerPlugin implements IndexerPlugin {
                 }
             }
         }
+        return dest;
     }
     
     public String getName() {

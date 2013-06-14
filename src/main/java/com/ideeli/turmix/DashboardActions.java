@@ -32,7 +32,7 @@ public class DashboardActions {
     static String GETCLASSES = "select c.id,c.name from nodes n,node_classes c,node_class_memberships r where r.node_id=n.id and r.node_class_id=c.id and n.name=?";
     static String GETVAR = "select p.key,p.value from parameters p,nodes n where p.parameterable_id=n.id and p.parameterable_type='Node' and p.key=? and n.name=?";
     static String ADDVAR = "insert into parameters values(null,?,?,?,'Node',now(),now())";
-    static String UPDATEVAR = "update parameters set value=? where parameterable_id=? and key=?";
+    static String UPDATEVAR = "update parameters p set p.value=? where p.parameterable_id=? and p.key=?";
     static String GET_ALL_VARS = "select p.key,p.value from parameters p,nodes n where p.parameterable_id=n.id and p.parameterable_type='Node' and n.name=?";
     static String SEARCH_NODES = "select parameterable_id,n.name from parameters p left join nodes n on (p.parameterable_id=n.id)";
     static String SEARCH_NODES_POST = "group by p.parameterable_id having count(parameterable_id)=? order by parameterable_id";
@@ -67,22 +67,22 @@ public class DashboardActions {
             }
             if (node_id != -1) {
                 for (String cls : classes) {
-                    Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to assignClass : " + cls);
+                    Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Trying to assignClass : " + cls);
                     if (!"".equals(cls)) {
                         assignClass(c, cls, node_id);
                     }
                 }
                 for (String grp : groups) {
-                    Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to assignGroup : " + grp);
+                    Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Trying to assignGroup : " + grp);
                     if (!"".equals(grp)) {
                         assignGroup(c, grp, node_id);
                     }
                 }
             }
-            } catch (Exception sqe) {
+            } catch (TurmixException | SQLException | RuntimeException sqe) {
                 throw sqe;
             } finally {
-                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Closing prov : " );
+                Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Closing prov : " );
                 if (node_stmt != null) {
                     node_stmt.close();
                 }
@@ -99,18 +99,19 @@ public class DashboardActions {
     public int getNodeId(Connection c, String node) throws SQLException {
         PreparedStatement vars = null;
         ResultSet rsc = null;
+        int result=-1;
         try {
             vars = c.prepareStatement(GETNODE);
             vars.setString(1, node);
             vars.executeQuery();
             rsc = vars.getResultSet();
             if (rsc.next()) {
-                return rsc.getInt("id");
+                result=rsc.getInt("id");
             }
-        } catch (Exception e) {
-            throw e;
+        } catch (SQLException | RuntimeException sqe) {
+            throw sqe;
         } finally {
-            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Closing getNID : " );
+            Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Closing getNID : " );
             if (vars != null) {
                 vars.close();
             }
@@ -118,7 +119,7 @@ public class DashboardActions {
                 rsc.close();
             }
         }
-        return -1;
+        return  result;
     }
 
     public void assignClass(Connection c, String cls, String node) throws SQLException, TurmixException {
@@ -147,7 +148,7 @@ public class DashboardActions {
                 cnr_stmt.setInt(2, group_id);
                 cnr_stmt.executeUpdate();
             }
-        } catch (Exception sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
             //Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing assign G : " );
@@ -174,7 +175,7 @@ public class DashboardActions {
             if (rs.next()) {
                 id = rs.getInt("id");
             } 
-        } catch (Exception sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
 //            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getgrop : " );
@@ -197,7 +198,7 @@ public class DashboardActions {
 
         if (class_id == -1) {
             if (autoCreateClasses) {
-                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Trying to Create class : " + cls);
+                Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Trying to Create class : " + cls);
                 class_id = addClass(c, cls);
             } else {
                 throw new TurmixException("Class " + cls + " do not exists");
@@ -217,7 +218,7 @@ public class DashboardActions {
                 cnr_stmt.setInt(2, class_id);
                 cnr_stmt.executeUpdate();
             }
-        } catch (Exception sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
 //            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing assign C : " );
@@ -244,7 +245,7 @@ public class DashboardActions {
             if (class_rs.next()) {
                 class_id = class_rs.getInt("id");
             }
-        } catch (SQLException sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
             
@@ -268,8 +269,9 @@ public class DashboardActions {
         }
     }
 
-    public void addVar(Connection c, String name, String value, String node, int node_id) throws SQLException, TurmixException {
+    public void addVar(Connection c, String name, String value, String node, int node_id) throws SQLException {
         JsonNode oldvalue = getVar(c, node, name);
+        Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Obtained : "+oldvalue.toString()+" VALUE = "+value);
         PreparedStatement cnr_stmt = null;
         try {
             if (!oldvalue.has(name)) {
@@ -285,10 +287,10 @@ public class DashboardActions {
                 cnr_stmt.setString(3, name);
                 cnr_stmt.executeUpdate();
             }
-        } catch (SQLException sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
-//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing addVar : " );
+            Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Clossing addVar : " );
             if (cnr_stmt != null) {
                 cnr_stmt.close();
             }
@@ -324,22 +326,17 @@ public class DashboardActions {
             while (rsc.next()) {
                 ret.add(rsc.getString(2));
             }
-        } catch (SQLException sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
-//            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing searchN : " );
-            if (vars != null) {
-                vars.close();
-            }
-            if (rsc != null) {
-                rsc.close();
-            }
+            if (vars != null) vars.close();
+            if (rsc != null) rsc.close();
         }
         return ret;
     }
 
     public int addClass(Connection c, String classname) throws SQLException, TurmixException {
-        Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Addng Class : " + classname);
+        Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Addng Class : " + classname);
         int class_id = getDBClass(c, classname);
         PreparedStatement class_stmt = null;
         ResultSet rsc = null;
@@ -352,8 +349,8 @@ public class DashboardActions {
                 if (rsc.next()) {
                     class_id = rsc.getInt(1);
                 }
-                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Added Class : " + class_id);
-            } catch (SQLException sqe) {
+                Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Added Class : " + class_id);
+            } catch (SQLException | RuntimeException sqe) {
                 throw sqe;
             } finally {
 //                Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing addClass : " );
@@ -384,7 +381,7 @@ public class DashboardActions {
                 ((ObjectNode) rowNode).put("name", rsc.getString(2));
                 ret.add(rowNode);
             }
-        } catch (SQLException sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
 //            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getClass : " );
@@ -412,7 +409,7 @@ public class DashboardActions {
                 ((ObjectNode) rowNode).put("name", rsc.getString("name"));
                 ret.add(rowNode);
             }
-        } catch (SQLException sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
 //            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing listNodes : " );
@@ -432,16 +429,15 @@ public class DashboardActions {
         JsonNode rootNode = mapper.createObjectNode();
         try {
             vars = c.prepareStatement(GETVAR);
-            vars.setString(1, node);
-            vars.setString(2, param);
+            vars.setString(2, node);
+            vars.setString(1, param);
             vars.executeQuery();
             rsc = vars.getResultSet();
-
             if (rsc.next()) {
                 ((ObjectNode) rootNode).put(param, rsc.getString(2));
             }
 
-        } catch (SQLException sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
 //            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getVar : " );
@@ -466,9 +462,10 @@ public class DashboardActions {
             vars.executeQuery();
             rsc = vars.getResultSet();
             while (rsc.next()) {
+                Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Reading var: "+ rsc.getString(1)+ " -> "+rsc.getString(2));
                 ((ObjectNode) rootNode).put(rsc.getString(1), rsc.getString(2));
             }
-        } catch (SQLException sqe) {
+        } catch (SQLException | RuntimeException sqe) {
             throw sqe;
         } finally {
 //            Logger.getLogger(Provision.class.getName()).log(Level.INFO, "Clossing getAllVar : " );
@@ -479,6 +476,7 @@ public class DashboardActions {
                 rsc.close();
             }
         }
+        Logger.getLogger(Provision.class.getName()).log(Level.FINE, "Node data "+ rootNode.toString());
         return rootNode;
     }
 }

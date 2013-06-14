@@ -37,7 +37,6 @@ public class Provision {
             return err;
         }
         try {
-            
             c = CommonResources.getConnectionPool().getConnection();
             c.setAutoCommit(true);
             int retcode = CommonResources.getDba().provisionMode(c, host, desc, classes,groups);

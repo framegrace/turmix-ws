@@ -5,10 +5,13 @@
 package com.ideeli.turmix.resources;
 
 import com.ideeli.turmix.CommonResources;
+import com.ideeli.turmix.TurmixException;
+import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import org.apache.solr.client.solrj.SolrServerException;
 
 public class ServletContext implements ServletContextListener {
 
@@ -26,8 +29,9 @@ public class ServletContext implements ServletContextListener {
             Logger.getLogger(ServletContext.class.getName()).log(Level.SEVERE, "Stopping scheduler...");
             CommonResources.stopIndexer();
             Logger.getLogger(ServletContext.class.getName()).log(Level.SEVERE, "Scheduler stopped");
+            CommonResources.getServer().commit();
         } //end constextDestroyed method
-        catch (InterruptedException ex) {
+        catch (InterruptedException | SolrServerException | IOException | TurmixException ex) {
             Logger.getLogger(ServletContext.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//end constextDestroyed method
